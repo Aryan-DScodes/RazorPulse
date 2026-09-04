@@ -24,6 +24,7 @@ def render():
     fig.add_vline(x=opt_thresh, line_width=2, line_dash="dot", line_color="#3498db", annotation_text=f"Optimal: {opt_thresh:.2f}")
     
     fig.update_layout(
+        height=300, # Added explicit height
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis_title="Score Threshold",
         yaxis_title="Expected Loss (₹)",

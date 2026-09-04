@@ -22,6 +22,7 @@ def render():
     fig.add_trace(go.Scatter(x=sample_sizes, y=mean_auc, mode='lines+markers', name='Mean PR-AUC', line=dict(color='#2980b9', width=2)))
     
     fig.update_layout(
+        height=300, # Added explicit height
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis_title="Cohort Sample Size (N)",
         yaxis_title="PR-AUC Metric",
