@@ -1,39 +1,65 @@
-import json
+import requests
 import time
 import random
-from faker import Faker
-from datetime import datetime
+import threading
+import sys
 
-fake = Faker()
+API_URL = "http://localhost:8000/v1/events/score/checkout"
 
-def generate_account_event():
-    return {
-        "account_id": fake.uuid4(),
-        "signup_ts": time.time(),
-        "ip_subnet": f"{fake.ipv4_private_class_c().rsplit('.', 1)[0]}.0/24",
-        "device_hash": fake.sha256()[:16],
-        "email_local_shingle": fake.email().split('@')[0][:4],
-        "mcc_category": random.choice(["5732", "5812", "5691"]) # Electronics, Dining, Clothing
-    }
+def send_checkout(is_bot=False):
+    """Fires a single HTTP POST to the backend."""
+    if is_bot:
+        payload = {
+            "account_id": f"bot-farm-{random.randint(100, 999)}", 
+            "txn_id": f"txn-{int(time.time()*1000)}", 
+            "amount": 99.0, # The heuristic trigger for our Flaw 7 bot
+            "ts": time.time(), 
+            "payment_instrument_hash": "stolen_hash",
+            "ip_subnet": "10.0.0.99/24"
+        }
+    else:
+        payload = {
+            "account_id": f"human-{random.randint(1000, 9999)}", 
+            "txn_id": f"txn-{int(time.time()*1000)}", 
+            "amount": round(random.uniform(10.0, 500.0), 2), 
+            "ts": time.time(), 
+            "payment_instrument_hash": f"secure_hash_{random.randint(1, 100)}",
+            "ip_subnet": f"192.168.{random.randint(1,255)}.0/24"
+        }
+        
+    try:
+        requests.post(API_URL, json=payload)
+    except requests.exceptions.ConnectionError:
+        pass # Silently fail if server is off during testing
 
-def generate_checkout_event(account_id):
-    return {
-        "account_id": account_id,
-        "txn_id": fake.uuid4(),
-        "amount": round(random.choice([99.0, 499.0, random.uniform(10, 1000)]), 2),
-        "ts": time.time(),
-        "payment_instrument_hash": fake.sha256()[:16]
-    }
+def run_baseline_traffic():
+    """Endless loop simulating continuous human checkouts."""
+    print("🟢 [Baseline] Starting continuous human traffic stream...")
+    while True:
+        send_checkout(is_bot=False)
+        time.sleep(0.4) # Control the speed of the baseline heartbeat
+
+def trigger_adversarial_burst():
+    """Injects a highly coordinated synthetic burst."""
+    print("\n🚨 [ATTACK] Injecting high-density adversarial burst (Flaw 7)...")
+    for _ in range(40):
+        send_checkout(is_bot=True)
+        time.sleep(0.02) # Extremely fast burst
+    print("🚨 [ATTACK] Burst complete.\n")
 
 if __name__ == "__main__":
-    print("Generating baseline synthetic traffic...")
-    with open("local_events_log.json", "a") as f:
-        for _ in range(10): # Generate 10 clean accounts
-            acc = generate_account_event()
-            f.write(json.dumps(acc) + "\n")
-            
-            # Each account does 1-3 checkouts
-            for _ in range(random.randint(1, 3)):
-                chk = generate_checkout_event(acc["account_id"])
-                f.write(json.dumps(chk) + "\n")
-    print("Traffic appended to local_events_log.json")
+    print("🛡️ RazorPulse Synthetic Traffic Generator")
+    print("----------------------------------------")
+    
+    # Start the continuous background heartbeat
+    baseline_thread = threading.Thread(target=run_baseline_traffic, daemon=True)
+    baseline_thread.start()
+    
+    # Interactive CLI to trigger bursts manually
+    try:
+        while True:
+            cmd = input("Press [ENTER] to inject an Adversarial Burst, or [CTRL+C] to quit: \n")
+            trigger_adversarial_burst()
+    except KeyboardInterrupt:
+        print("\n🛑 Shutting down traffic generator.")
+        sys.exit(0)
