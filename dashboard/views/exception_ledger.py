@@ -3,9 +3,8 @@ import pandas as pd
 from agents.swarm import run_investigation 
 
 def render(df):
-    # --- DYNAMIC DATA AGGREGATION FROM BACKEND ---
+    # --- DYNAMIC DATA AGGREGATION ---
     if df is not None and not df.empty:
-        # Group raw events into cohorts by Subnet
         summary_df = df.groupby('IP Subnet').agg(
             Txns=('Action', 'count'),
             Density=('SCI Anomaly Score', 'max'),
@@ -23,7 +22,7 @@ def render(df):
     st.write("Deploy the Agentic Swarm to investigate blocked events.")
     
     if not blocked_ids:
-        st.info("No blocked cohorts detected in current backend buffer.")
+        st.info("No blocked cohorts detected. Inject a burst to generate an exception.")
     else:
         target_cohort = st.selectbox("Select Blocked Target:", blocked_ids)
         
@@ -33,28 +32,44 @@ def render(df):
             with st.expander("Terminal: Swarm Execution Logs", expanded=True):
                 terminal_placeholder = st.empty()
                 log_text = ""
+                final_intel = ""
+                final_risk = ""
+                final_comms = ""
+                
+                # We capture the specific outputs from the generator
                 for chunk in run_investigation(target_cohort, target_cohort, target_data['Density']):
                     log_text += chunk
                     terminal_placeholder.markdown(log_text)
                     
-            st.success("Post-Mortem Report Generated.")
+                    # Exact string matching based on the swarm.py outputs
+                    if "🔍 **[IntelAgent Output]**:" in chunk:
+                        final_intel = chunk.split("🔍 **[IntelAgent Output]**:")[1].strip()
+                    if "📊 **[RiskQuantAgent Output]**:" in chunk:
+                        final_risk = chunk.split("📊 **[RiskQuantAgent Output]**:")[1].strip()
+                    if "✉️ **[CommsAgent Final Report]**:" in chunk:
+                        final_comms = chunk.split("✉️ **[CommsAgent Final Report]**:")[1].strip()
+                        
+            st.success("Post-Mortem Report Generated Dynamically by AI.")
             
+            # --- NATIVE STREAMLIT UI INJECTED WITH REAL AI DATA ---
             with st.container(border=True):
                 st.markdown("### 🛡️ Automated Risk Post-Mortem")
                 st.markdown(f"**Tracking Target:** `{target_cohort}` &nbsp;|&nbsp; **Status:** 🟢 **CONTAINED**")
                 
                 st.divider()
                 
-                st.markdown("#### 🔬 Technical Indicators of Compromise (IOCs)")
-                st.markdown("- **Vector:** High-velocity credential stuffing targeting Promo Code endpoints.")
-                st.markdown(f"- **Origin:** Traffic routed via known 'Scattered Spider' proxy IPs (`{target_cohort}`).")
-                st.markdown(f"- **Anomaly:** Max DenStream Density of `{target_data['Density']:.2f}` triggered T-0 hard block.")
+                st.markdown("#### 🔬 Technical Threat Intelligence (IntelAgent)")
+                st.markdown(f"> {final_intel if final_intel else 'Intelligence data unavailable.'}")
                 
-                st.markdown("#### 💼 Financial Blast Radius")
-                st.markdown("- **Exposure Prevented:** 💰 **₹4,50,000** in immediate chargeback liability.")
-                st.markdown("- **False Positive (C_FP) Impact:** 0.00% (Isolated exclusively to bot-farm signatures).")
+                st.markdown("#### 💼 Financial Exposure (RiskQuantAgent)")
+                st.markdown(f"> {final_risk if final_risk else 'Financial calculation unavailable.'}")
                 
-                st.markdown("#### ⚡ Automated Mitigations (T-0)")
+                st.markdown("#### ✉️ Merchant Advisory (CommsAgent)")
+                st.markdown(f"> {final_comms if final_comms else 'Advisory drafting failed.'}")
+                
+                st.divider()
+                
+                st.markdown("#### ⚡ Automated Mitigations Applied")
                 st.markdown(f"- Gateway-level drop implemented for {target_data['Txns']} unique synthetic device hashes.")
                 st.markdown("- Dynamic 3D-Secure (OTP) step-up enforced for all adjacent carts > ₹10,000.")
                 

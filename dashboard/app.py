@@ -1,7 +1,9 @@
 import streamlit as st
 import requests
 import time
+import threading
 import pandas as pd
+from streamlit_autorefresh import st_autorefresh
 from views import cluster_projection, cost_curve, monte_carlo_scaling, exception_ledger
 
 st.set_page_config(page_title="RazorPulse", layout="wide")
@@ -17,21 +19,36 @@ API_URL = "http://localhost:8000"
 
 # --- SIDEBAR CONTROL PANEL ---
 st.sidebar.header("⚙️ Command Center")
-sync_active = st.sidebar.toggle("📡 Live API Sync", value=True, help="Polls the FastAPI backend every 1 second.")
 
-if st.sidebar.button("🧹 Clear Backend Buffer"):
+# SMOOTH LIVE SYNC: Uses JS to refresh every 2000ms without freezing Python
+sync_active = st.sidebar.toggle("📡 Live API Sync", value=False, help="Smooth background refresh.")
+if sync_active:
+    st_autorefresh(interval=2000, limit=None, key="live_sync")
+
+if st.sidebar.button("🧹 Reset System (Clear Ledger)"):
     requests.delete(f"{API_URL}/v1/telemetry/reset")
     st.sidebar.success("Backend memory cleared.")
     st.rerun()
 
-# Keeping this button in the UI for the video pitch so you don't have to switch terminal windows
-if st.sidebar.button("🔴 Inject Burst (Via API)"):
-    with st.spinner("Firing 40 HTTP POST requests to backend..."):
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Simulation Controls:**")
+
+# INSTANT BURST: Fires requests in a background thread to prevent UI freezing
+if st.sidebar.button("🔴 Inject Adversarial Burst"):
+    def inject_bot_traffic():
         for _ in range(40):
-            requests.post(f"{API_URL}/v1/events/score/checkout", json={
-                "account_id": "bot-farm-999", "txn_id": "txn-9999", 
-                "amount": 99.0, "ts": time.time(), "payment_instrument_hash": "stolen_hash", "ip_subnet": "10.0.0.99/24"
-            })
+            try:
+                requests.post(f"{API_URL}/v1/events/score/checkout", json={
+                    "account_id": "bot-farm-999", "txn_id": f"txn-{time.time()}", 
+                    "amount": 99.0, "ts": time.time(), "payment_instrument_hash": "stolen_hash", "ip_subnet": "10.0.0.99/24"
+                })
+            except:
+                pass
+    
+    # Start the attack in the background
+    threading.Thread(target=inject_bot_traffic, daemon=True).start()
+    st.sidebar.error("🚨 Burst injected! It will appear on the next tick.")
+    time.sleep(0.5) # Give the backend a fraction of a second to catch the first few requests
     st.rerun()
 
 # --- FETCH LIVE STATE FROM BACKEND ---
@@ -51,11 +68,8 @@ st.markdown("---")
 col_main, col_side = st.columns([2.2, 1])
 
 with col_main:
-    # Pass the real backend data to the projection chart
     cluster_projection.render(traffic_df)
-    
     st.markdown("---")
-    
     col_bottom1, col_bottom2 = st.columns(2)
     with col_bottom1:
         cost_curve.render()
@@ -63,10 +77,4 @@ with col_main:
         monte_carlo_scaling.render()
 
 with col_side:
-    # Pass the real backend data to the ledger
     exception_ledger.render(traffic_df)
-
-# --- THE REAL-TIME POLLING LOOP ---
-if sync_active:
-    time.sleep(1) # Poll the backend every 1 second
-    st.rerun()
