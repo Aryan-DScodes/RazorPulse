@@ -41,7 +41,7 @@ def run_baseline_traffic():
 
 def trigger_adversarial_burst():
     """Injects a highly coordinated synthetic burst."""
-    print("\n🚨 [ATTACK] Injecting high-density adversarial burst (Flaw 7)...")
+    print("\n🚨 [ATTACK] Injecting high-density adversarial burst...")
     for _ in range(40):
         send_checkout(is_bot=True)
         time.sleep(0.02) # Extremely fast burst
