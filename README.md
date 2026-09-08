@@ -59,9 +59,15 @@ During deployment profiling, the architecture was hardened against several criti
 **Issue:** Default ML decision thresholds (0.5) are inadequate for FinTech. Blocking a legitimate user (False Positive) who spends ₹15,000 annually costs drastically more than letting a bot drain a ₹500 promo (False Negative).
 **Resolution:** Built an explicit financial cost equation using Razorpay-equivalent liability metrics. The system sweeps thresholds from 0.0 to 1.0, dynamically selecting the cutoff that results in the **lowest actual Rupee (₹) loss liability**.
 
+![Financial Optimization Sweep](assets/financial_sweep.png)
+*Figure 1: RazorPulse UI dynamically calculating the optimal decision threshold to minimize net Rupee liability.*
+
 ### 3. Variance Control in Small Data Windows
 **Issue:** Initial traffic streams often lack the volume required for stable statistical metrics.
 **Resolution:** Implemented **Monte Carlo scaling** (visualized in the dashboard) to bootstrap confidence intervals, accounting for statistical variance natively in production.
+
+![Bootstrap Confidence Scaling](assets/bootstrap_scaling.png)
+*Figure 2: Streamlit observability module bootstrapping confidence intervals for low-volume traffic streams.*
 
 ---
 
